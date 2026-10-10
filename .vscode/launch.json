@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (web)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/ServicePortal.Web/bin/Debug/net10.0/ServicePortal.Web.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/ServicePortal.Web",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openUrl",
+                "openFiles": [],
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/src/ServicePortal.Web/Views"
+            }
+        }
+    ]
+}

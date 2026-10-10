@@ -1,0 +1,20 @@
+## Visual Studio / .NET Core gitignore
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+appsettings.Development.json
+App_Data/Uploads/*
+!App_Data/Uploads/.gitkeep
+docx_content.txt
+ppt_dump.txt
+extract_slides.ps1
