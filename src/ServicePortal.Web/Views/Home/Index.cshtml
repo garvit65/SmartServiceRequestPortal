@@ -1,0 +1,91 @@
+@{
+    ViewData["Title"] = "Welcome";
+}
+
+<div class="row justify-content-center my-4">
+    <div class="col-lg-10">
+        <div class="p-5 mb-4 bg-white rounded-3 shadow-sm border text-center">
+            <h1 class="display-5 fw-bold text-primary mb-3">
+                <i class="bi bi-headset me-2"></i>Contoso Smart Service Request Management Portal
+            </h1>
+            <p class="lead text-muted mx-auto col-md-9 mb-4">
+                A modern enterprise portal designed to streamline IT, facilities, and HR support requests with automated routing, SLA tracking, role-based workflows, and full audit logging.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a class="btn btn-primary btn-lg px-4" asp-controller="Account" asp-action="Login">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </a>
+                <a class="btn btn-outline-secondary btn-lg px-4" asp-controller="Account" asp-action="Register">
+                    <i class="bi bi-person-plus me-2"></i>Register New Account
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-person-workspace me-2"></i>Quick One-Click Demo Personas</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Click any persona below to instantly authenticate and evaluate the system with configured roles and permissions:</p>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="card h-100 border-primary bg-light text-center p-3">
+                            <i class="bi bi-person-fill fs-1 text-primary"></i>
+                            <h6 class="fw-bold mt-2">Requester</h6>
+                            <p class="small text-muted mb-3">John Employee (Submit & track own tickets, add attachments)</p>
+                            <a class="btn btn-sm btn-primary mt-auto" asp-controller="Account" asp-action="QuickLogin" asp-route-role="requester">Sign In as Requester</a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 border-success bg-light text-center p-3">
+                            <i class="bi bi-headset fs-1 text-success"></i>
+                            <h6 class="fw-bold mt-2">Support Agent</h6>
+                            <p class="small text-muted mb-3">Ian IT-Agent (Handle assigned tickets, add internal notes, resolve)</p>
+                            <a class="btn btn-sm btn-success mt-auto" asp-controller="Account" asp-action="QuickLogin" asp-route-role="agent">Sign In as Agent</a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 border-info bg-light text-center p-3">
+                            <i class="bi bi-diagram-3-fill fs-1 text-info"></i>
+                            <h6 class="fw-bold mt-2">Team Lead</h6>
+                            <p class="small text-muted mb-3">Liam IT-Lead (Assign tickets to agents, monitor team SLA performance)</p>
+                            <a class="btn btn-sm btn-info text-white mt-auto" asp-controller="Account" asp-action="QuickLogin" asp-route-role="lead">Sign In as Team Lead</a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 border-danger bg-light text-center p-3">
+                            <i class="bi bi-shield-lock-fill fs-1 text-danger"></i>
+                            <h6 class="fw-bold mt-2">Administrator</h6>
+                            <p class="small text-muted mb-3">Alice Admin (Full access: SLA targets, categories, users, audit logs)</p>
+                            <a class="btn btn-sm btn-danger mt-auto" asp-controller="Account" asp-action="QuickLogin" asp-route-role="admin">Sign In as Admin</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="card p-3 h-100 shadow-sm border-0">
+                    <i class="bi bi-arrow-repeat fs-1 text-primary mb-2"></i>
+                    <h5 class="fw-bold">Strict Lifecycle Validation</h5>
+                    <p class="text-muted small">New &rarr; Assigned &rarr; In Progress &rarr; Waiting &rarr; Resolved &rarr; Closed. Server-side validation guarantees tamper-proof workflows.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 h-100 shadow-sm border-0">
+                    <i class="bi bi-clock-history fs-1 text-warning mb-2"></i>
+                    <h5 class="fw-bold">Business Hours SLA</h5>
+                    <p class="text-muted small">Automatic SLA calculation excluding weekends (Mon-Fri 09:00-18:00). Background service detects breaches with notifications.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3 h-100 shadow-sm border-0">
+                    <i class="bi bi-shield-check fs-1 text-success mb-2"></i>
+                    <h5 class="fw-bold">Enterprise Security & Audit</h5>
+                    <p class="text-muted small">Anti-CSRF protection, role authorization, internal note redaction, IDOR prevention, and correlated audit trails.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

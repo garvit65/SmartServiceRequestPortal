@@ -1,0 +1,249 @@
+@model DashboardMetricsDto
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-speedometer2 me-2"></i>@Model.UserRole Dashboard</h2>
+        <p class="text-muted mb-0">Overview of active service requests, performance indicators, and recent operational activity.</p>
+    </div>
+    <div>
+        @if (User.IsInRole(AppRoles.Requester) || User.IsInRole(AppRoles.Administrator))
+        {
+            <a asp-controller="Requests" asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Create New Request
+            </a>
+        }
+        <a asp-controller="Requests" asp-action="Index" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-list-task me-1"></i>View All Requests
+        </a>
+    </div>
+</div>
+
+<!-- Primary Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card p-3 border-start border-4 border-primary shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">Total Requests</span>
+                    <h3 class="fw-bold my-1">@Model.TotalCount</h3>
+                    <span class="small text-muted">Across current scope</span>
+                </div>
+                <div class="fs-1 text-primary opacity-50"><i class="bi bi-folder2-open"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card p-3 border-start border-4 border-info shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">In Progress</span>
+                    <h3 class="fw-bold my-1">@Model.InProgressCount</h3>
+                    <span class="small text-muted">Active resolution</span>
+                </div>
+                <div class="fs-1 text-info opacity-50"><i class="bi bi-gear-wide-connected"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card p-3 border-start border-4 border-warning shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">Waiting Requester</span>
+                    <h3 class="fw-bold my-1">@Model.WaitingForRequesterCount</h3>
+                    <span class="small text-muted">Awaiting feedback</span>
+                </div>
+                <div class="fs-1 text-warning opacity-50"><i class="bi bi-hourglass-split"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card p-3 border-start border-4 border-danger shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">SLA Breached</span>
+                    <h3 class="fw-bold my-1 text-danger">@Model.BreachedCount</h3>
+                    <span class="small text-muted">Compliance: <strong>@Model.SlaCompliancePercentage%</strong></span>
+                </div>
+                <div class="fs-1 text-danger opacity-50"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Metric Row for Leads & Admins -->
+@if (User.IsInRole(AppRoles.TeamLead) || User.IsInRole(AppRoles.Administrator))
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card p-3 bg-white shadow-sm">
+                <span class="text-muted small">Avg. Resolution Duration</span>
+                <h4 class="fw-bold my-1 text-success">@Model.AverageResolutionHours hrs</h4>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" style="width: 75%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card p-3 bg-white shadow-sm">
+                <span class="text-muted small">SLA Compliance Target</span>
+                <h4 class="fw-bold my-1 text-primary">@Model.SlaCompliancePercentage%</h4>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" style="width: @Model.SlaCompliancePercentage%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card p-3 bg-white shadow-sm">
+                <span class="text-muted small">Approaching SLA Target (Due Soon)</span>
+                <h4 class="fw-bold my-1 text-warning">@Model.DueSoonCount</h4>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-warning" style="width: 60%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card p-3 bg-white shadow-sm">
+                <span class="text-muted small">Resolved & Closed</span>
+                <h4 class="fw-bold my-1 text-secondary">@(Model.ResolvedCount + Model.ClosedCount)</h4>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-secondary" style="width: 85%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-4 mb-4">
+    <!-- Recent Requests Table -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Recent Operational Queue</h5>
+                <a asp-controller="Requests" asp-action="Index" class="btn btn-sm btn-outline-primary">View Full List</a>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentRequests.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ref #</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>SLA</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in Model.RecentRequests)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-controller="Requests" asp-action="Details" asp-route-id="@r.Id" class="fw-bold text-decoration-none">
+                                                @r.ReferenceNumber
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-truncate" style="max-width: 200px;">@r.Title</div>
+                                            <small class="text-muted">By @r.RequesterName</small>
+                                        </td>
+                                        <td><span class="badge bg-light text-dark border">@r.CategoryName</span></td>
+                                        <td>
+                                            <span class="badge @(r.Priority == RequestPriority.Critical ? "bg-danger" : r.Priority == RequestPriority.High ? "bg-warning text-dark" : r.Priority == RequestPriority.Medium ? "bg-info text-dark" : "bg-secondary")">
+                                                @r.Priority
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(r.Status == RequestStatus.New ? "bg-primary" : r.Status == RequestStatus.Assigned ? "bg-info text-dark" : r.Status == RequestStatus.InProgress ? "bg-warning text-dark" : r.Status == RequestStatus.WaitingForRequester ? "bg-secondary" : r.Status == RequestStatus.Resolved ? "bg-success" : "bg-dark")">
+                                                @r.Status
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (r.IsSlaBreached)
+                                            {
+                                                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Breached</span>
+                                            }
+                                            else if (r.SlaStatus == SlaStatus.ApproachingBreach)
+                                            {
+                                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Due Soon</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>On Track</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Requests" asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="p-4 text-center text-muted">No recent requests found in your current view.</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Distributions / Workload Breakdown -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2"></i>Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.StatusDistribution.Any())
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var kvp in Model.StatusDistribution)
+                        {
+                            <li class="d-flex justify-content-between align-items-center py-2">
+                                <span>@kvp.Key</span>
+                                <span class="badge bg-primary rounded-pill">@kvp.Value</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-muted small text-center py-3">No distribution data available.</div>
+                }
+            </div>
+        </div>
+
+        @if (Model.AgentWorkload.Any())
+        {
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill me-2"></i>Active Agent Workload</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var kvp in Model.AgentWorkload)
+                        {
+                            <li class="d-flex justify-content-between align-items-center py-2">
+                                <span>@kvp.Key</span>
+                                <span class="badge bg-success rounded-pill">@kvp.Value active</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>

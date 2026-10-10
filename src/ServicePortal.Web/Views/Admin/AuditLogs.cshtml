@@ -1,0 +1,60 @@
+@model List<AuditLog>
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-journal-text me-2"></i>Audit Logs & Correlation Tracing</h2>
+        <p class="text-muted mb-0">System-wide immutable audit trail of state transitions, assignments, and actions.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="AuditLogs" class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-filter"></i> Correlation ID</span>
+                    <input type="text" name="correlationId" value="@ViewBag.CorrelationId" class="form-control" placeholder="Search by Correlation ID trace..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">Filter Logs</button>
+                <a asp-action="AuditLogs" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp (UTC)</th>
+                        <th>Actor</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>Summary</th>
+                        <th>Correlation ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        <tr>
+                            <td>@log.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td><span class="fw-bold">@log.ActorName</span></td>
+                            <td><span class="badge bg-secondary-subtle text-dark border">@log.Action</span></td>
+                            <td>@log.EntityName (#@log.EntityId)</td>
+                            <td>@log.ChangeSummary</td>
+                            <td><code class="text-muted">@log.CorrelationId</code></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

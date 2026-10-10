@@ -1,0 +1,68 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign In";
+}
+
+<div class="row justify-content-center my-4">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4 class="mb-0"><i class="bi bi-box-arrow-in-right me-2"></i>Sign In</h4>
+            </div>
+            <div class="card-body p-4">
+                <form asp-controller="Account" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input asp-for="Email" class="form-control" placeholder="name@contoso.com" autofocus />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-key"></i></span>
+                            <input asp-for="Password" class="form-control" placeholder="Password" />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label"></label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                        Sign In
+                    </button>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="text-center">
+                    <p class="text-muted small mb-2">Need a new portal account?</p>
+                    <a asp-action="Register" class="btn btn-outline-secondary btn-sm">Create New Account</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-info bg-light">
+            <div class="card-body py-2">
+                <span class="fw-semibold text-info-emphasis small"><i class="bi bi-info-circle me-1"></i>Quick Evaluation Accounts:</span>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <a class="btn btn-xs btn-outline-primary btn-sm py-0" asp-action="QuickLogin" asp-route-role="requester">Requester</a>
+                    <a class="btn btn-xs btn-outline-success btn-sm py-0" asp-action="QuickLogin" asp-route-role="agent">Agent</a>
+                    <a class="btn btn-xs btn-outline-info btn-sm py-0" asp-action="QuickLogin" asp-route-role="lead">Lead</a>
+                    <a class="btn btn-xs btn-outline-danger btn-sm py-0" asp-action="QuickLogin" asp-route-role="admin">Admin</a>
+                    <a class="btn btn-xs btn-outline-secondary btn-sm py-0" asp-action="QuickLogin" asp-route-role="inactive">Inactive User</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

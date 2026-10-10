@@ -1,0 +1,464 @@
+@model RequestDetailsDto
+@{
+    ViewData["Title"] = $"Request {Model.ReferenceNumber}";
+    var isRequester = User.IsInRole(AppRoles.Requester);
+    var isAgent = User.IsInRole(AppRoles.SupportAgent);
+    var isLead = User.IsInRole(AppRoles.TeamLead);
+    var isAdmin = User.IsInRole(AppRoles.Administrator);
+}
+
+<div class="row g-4 my-2">
+    <!-- Main Ticket Column -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-secondary font-monospace me-2">@Model.ReferenceNumber</span>
+                    <span class="badge @(Model.Status == RequestStatus.New ? "bg-primary" : Model.Status == RequestStatus.Assigned ? "bg-info text-dark" : Model.Status == RequestStatus.InProgress ? "bg-warning text-dark" : Model.Status == RequestStatus.WaitingForRequester ? "bg-secondary" : Model.Status == RequestStatus.Resolved ? "bg-success" : "bg-dark")">
+                        @Model.Status
+                    </span>
+                    <span class="badge @(Model.Priority == RequestPriority.Critical ? "bg-danger" : Model.Priority == RequestPriority.High ? "bg-warning text-dark" : Model.Priority == RequestPriority.Medium ? "bg-info text-dark" : "bg-secondary") ms-1">
+                        @Model.Priority Priority
+                    </span>
+                </div>
+                <div class="text-muted small">
+                    Created: <strong>@Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</strong>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <h3 class="fw-bold mb-3 text-dark">@Model.Title</h3>
+                <div class="p-3 bg-light rounded-3 mb-4">
+                    <h6 class="fw-semibold text-secondary mb-2">Description</h6>
+                    <p class="mb-0 text-break" style="white-space: pre-wrap;">@Model.Description</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.ResolutionSummary))
+                {
+                    <div class="alert alert-success border-success">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i>
+                            <h6 class="fw-bold mb-0">Resolution Summary (@Model.ResolutionCategory)</h6>
+                        </div>
+                        <p class="mb-1 text-break">@Model.ResolutionSummary</p>
+                        <small class="text-muted">Resolved on: @Model.ResolvedAtUtc?.ToString("yyyy-MM-dd HH:mm") UTC</small>
+                    </div>
+                }
+
+                <!-- Action Workflow Buttons Bar -->
+                <div class="d-flex flex-wrap gap-2 pt-2 border-top">
+                    <!-- Assign Button (Lead & Admin) -->
+                    @if (isLead || isAdmin)
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assignModal">
+                            <i class="bi bi-person-check me-1"></i>@(string.IsNullOrEmpty(Model.AssigneeName) ? "Assign Ticket" : "Reassign")
+                        </button>
+                    }
+
+                    <!-- Start Progress (Agent, Lead, Admin) -->
+                    @if ((isAgent || isLead || isAdmin) && Model.Status == RequestStatus.Assigned)
+                    {
+                        <form asp-action="TransitionStatus" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="requestId" value="@Model.Id" />
+                            <input type="hidden" name="newStatus" value="@RequestStatus.InProgress" />
+                            <input type="hidden" name="rowVersion" value="@Model.RowVersion" />
+                            <input type="hidden" name="reason" value="Support technician began investigation." />
+                            <button type="submit" class="btn btn-warning btn-sm text-dark">
+                                <i class="bi bi-play-circle me-1"></i>Start Progress
+                            </button>
+                        </form>
+                    }
+
+                    <!-- Request Info Button (Agent, Lead, Admin) -->
+                    @if ((isAgent || isLead || isAdmin) && Model.Status == RequestStatus.InProgress)
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#requestInfoModal">
+                            <i class="bi bi-question-circle me-1"></i>Waiting for Requester
+                        </button>
+                    }
+
+                    <!-- Resolve Button (Agent, Lead, Admin) -->
+                    @if ((isAgent || isLead || isAdmin) && (Model.Status == RequestStatus.InProgress || Model.Status == RequestStatus.WaitingForRequester))
+                    {
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#resolveModal">
+                            <i class="bi bi-check2-circle me-1"></i>Resolve Ticket
+                        </button>
+                    }
+
+                    <!-- Reopen Button (Requester, Lead, Admin within 7 days) -->
+                    @if (Model.CanReopen)
+                    {
+                        <button type="button" class="btn btn-outline-warning btn-sm text-dark" data-bs-toggle="modal" data-bs-target="#reopenModal">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reopen Ticket
+                        </button>
+                    }
+
+                    <!-- Close Button (Requester, Lead, Admin) -->
+                    @if (Model.CanClose)
+                    {
+                        <form asp-action="TransitionStatus" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to close and confirm resolution of this ticket?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="requestId" value="@Model.Id" />
+                            <input type="hidden" name="newStatus" value="@RequestStatus.Closed" />
+                            <input type="hidden" name="rowVersion" value="@Model.RowVersion" />
+                            <button type="submit" class="btn btn-dark btn-sm">
+                                <i class="bi bi-check-all me-1"></i>Confirm & Close
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabbed Section: Comments & Activity Timeline -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white p-0 border-bottom">
+                <ul class="nav nav-tabs card-header-tabs m-0 px-3 pt-2" id="ticketTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-semibold" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments">
+                            <i class="bi bi-chat-dots me-1"></i>Comments (@Model.Comments.Count)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-semibold" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline">
+                            <i class="bi bi-clock-history me-1"></i>Activity Timeline (@Model.Timeline.Count)
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4 tab-content">
+                <!-- Comments Tab -->
+                <div class="tab-pane fade show active" id="comments">
+                    @if (Model.Comments.Any())
+                    {
+                        <div class="d-flex flex-column gap-3 mb-4">
+                            @foreach (var c in Model.Comments)
+                            {
+                                <div class="card border @(c.IsInternal ? "border-warning bg-warning-subtle" : "border-light bg-light") shadow-none">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div>
+                                                <strong>@c.AuthorName</strong>
+                                                <span class="badge bg-secondary-subtle text-secondary small ms-1">@c.AuthorRole</span>
+                                                @if (c.IsInternal)
+                                                {
+                                                    <span class="badge bg-warning text-dark small ms-1"><i class="bi bi-lock me-1"></i>Internal Note</span>
+                                                }
+                                            </div>
+                                            <small class="text-muted">@c.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</small>
+                                        </div>
+                                        <p class="mb-0 text-break" style="white-space: pre-wrap;">@c.Body</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small text-center py-3">No comments posted yet.</p>
+                    }
+
+                    <!-- Add Comment Form -->
+                    @if (Model.Status != RequestStatus.Closed || isAdmin)
+                    {
+                        <form asp-action="AddComment" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="RequestId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Add New Comment</label>
+                                <textarea name="Body" class="form-control" rows="3" placeholder="Write your message here..." required></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    @if (!isRequester)
+                                    {
+                                        <div class="form-check">
+                                            <input type="checkbox" name="IsInternal" value="true" class="form-check-input" id="isInternalCheck" />
+                                            <label class="form-check-label text-warning-emphasis small fw-semibold" for="isInternalCheck">
+                                                <i class="bi bi-lock-fill me-1"></i>Internal Note (Visible to support staff only)
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-send me-1"></i>Post Comment
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary small mb-0">This request is closed. Comments are disabled.</div>
+                    }
+                </div>
+
+                <!-- Timeline Tab -->
+                <div class="tab-pane fade" id="timeline">
+                    <div class="timeline">
+                        @foreach (var ev in Model.Timeline)
+                        {
+                            <div class="timeline-item @(ev.IsInternal ? "internal" : "")">
+                                <div class="d-flex justify-content-between">
+                                    <strong class="text-primary">@ev.EventType</strong>
+                                    <small class="text-muted">@ev.TimestampUtc.ToString("yyyy-MM-dd HH:mm") UTC</small>
+                                </div>
+                                <div class="small text-muted mb-1">Actor: <strong>@ev.ActorName</strong></div>
+                                <div class="text-dark small">@ev.Details</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar Metadata Column -->
+    <div class="col-lg-4">
+        <!-- SLA Health Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-stopwatch me-2"></i>Service Level Agreement (SLA)</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="text-muted small d-block">SLA Health State:</span>
+                    @if (Model.IsSlaBreached)
+                    {
+                        <span class="badge bg-danger fs-6 mt-1"><i class="bi bi-x-circle me-1"></i>SLA Breached</span>
+                    }
+                    else if (Model.SlaStatus == SlaStatus.ApproachingBreach)
+                    {
+                        <span class="badge bg-warning text-dark fs-6 mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Approaching Breach</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success fs-6 mt-1"><i class="bi bi-check-circle me-1"></i>Within SLA Target</span>
+                    }
+                </div>
+
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Response Due:</span>
+                        <strong>@Model.ResponseDueAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">First Response:</span>
+                        <span>@(Model.FirstRespondedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "Pending")</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Resolution Due:</span>
+                        <strong>@Model.ResolutionDueAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Business Hours Policy:</span>
+                        <span>Mon-Fri 09:00 - 18:00</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Ticket Details Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Request Details</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Requester:</span>
+                        <strong>@Model.RequesterName</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Email:</span>
+                        <span>@Model.RequesterEmail</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Preferred Contact:</span>
+                        <span>@Model.PreferredContactMethod</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Support Team:</span>
+                        <span class="fw-semibold text-primary">@Model.TeamName</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Assigned Agent:</span>
+                        <span>@(string.IsNullOrEmpty(Model.AssigneeName) ? "Unassigned" : Model.AssigneeName)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Category:</span>
+                        <span>@Model.CategoryName</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Attachments Card -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-paperclip me-2"></i>Attachments (@Model.Attachments.Count)</h6>
+            </div>
+            <div class="card-body">
+                @if (Model.Attachments.Any())
+                {
+                    <ul class="list-group list-group-flush small">
+                        @foreach (var att in Model.Attachments)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div class="text-truncate me-2">
+                                    <i class="bi bi-file-earmark me-1 text-primary"></i>
+                                    <span>@att.OriginalFileName</span>
+                                    <div class="text-muted" style="font-size: 0.75rem;">@((att.FileSizeBytes / 1024.0).ToString("F1")) KB &bull; By @att.UploadedByName</div>
+                                </div>
+                                <a asp-action="DownloadAttachment" asp-route-id="@att.Id" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-muted small text-center py-2">No attachments uploaded.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Modal -->
+@if (isLead || isAdmin)
+{
+    <div class="modal fade" id="assignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form asp-action="Assign" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Assign Ticket @Model.ReferenceNumber</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="RequestId" value="@Model.Id" />
+                        <input type="hidden" name="RowVersion" value="@Model.RowVersion" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Select Agent <span class="text-danger">*</span></label>
+                            <select name="AssigneeId" asp-items="ViewBag.AvailableAssignees" class="form-select" required>
+                                <option value="">-- Select Active Support Agent --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Assignment Note / Reason</label>
+                            <textarea name="Reason" class="form-control" rows="2" placeholder="Instructions or routing context..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Assignment</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Request Info Modal -->
+<div class="modal fade" id="requestInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="TransitionStatus" method="post">
+            @Html.AntiForgeryToken()
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Request Information from Requester</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="requestId" value="@Model.Id" />
+                    <input type="hidden" name="newStatus" value="@RequestStatus.WaitingForRequester" />
+                    <input type="hidden" name="rowVersion" value="@Model.RowVersion" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Information Needed (Public Note) <span class="text-danger">*</span></label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Explain clearly what information or confirmation is required..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Request for Info</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resolve Modal -->
+<div class="modal fade" id="resolveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="TransitionStatus" method="post">
+            @Html.AntiForgeryToken()
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Resolve Service Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="requestId" value="@Model.Id" />
+                    <input type="hidden" name="newStatus" value="@RequestStatus.Resolved" />
+                    <input type="hidden" name="rowVersion" value="@Model.RowVersion" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Resolution Category <span class="text-danger">*</span></label>
+                        <select name="resolutionCategory" class="form-select" required>
+                            <option value="Hardware Fixed/Replaced">Hardware Fixed/Replaced</option>
+                            <option value="Access Granted">Access Granted</option>
+                            <option value="Configuration Applied">Configuration Applied</option>
+                            <option value="Answer Provided">Answer Provided</option>
+                            <option value="User Error Resolved">User Error Resolved</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Resolution Summary <span class="text-danger">*</span></label>
+                        <textarea name="resolutionSummary" class="form-control" rows="3" placeholder="Describe how the request was fulfilled or fixed..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Mark as Resolved</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reopen Modal -->
+<div class="modal fade" id="reopenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="TransitionStatus" method="post">
+            @Html.AntiForgeryToken()
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Reopen Service Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="requestId" value="@Model.Id" />
+                    <input type="hidden" name="newStatus" value="@RequestStatus.InProgress" />
+                    <input type="hidden" name="rowVersion" value="@Model.RowVersion" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reason for Reopening <span class="text-danger">*</span></label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Explain why the resolution did not solve the issue..." required></textarea>
+                    </div>
+                    <div class="alert alert-info small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>Requests can be reopened within 7 calendar days of being marked resolved.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Reopen Ticket</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

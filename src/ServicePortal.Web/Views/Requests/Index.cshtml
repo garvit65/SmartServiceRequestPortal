@@ -1,0 +1,252 @@
+@model PaginatedList<RequestListItemDto>
+@{
+    ViewData["Title"] = "Service Requests";
+    var filter = (RequestFilterDto)ViewBag.Filter;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-ticket-detailed me-2"></i>Service Requests</h2>
+        <p class="text-muted mb-0">Browse, filter, monitor SLA, and manage service requests.</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (User.IsInRole(AppRoles.Requester) || User.IsInRole(AppRoles.Administrator))
+        {
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>New Request
+            </a>
+        }
+        <a asp-action="ExportCsv"
+           asp-route-SearchTerm="@filter.SearchTerm"
+           asp-route-Status="@filter.Status"
+           asp-route-CategoryId="@filter.CategoryId"
+           asp-route-Priority="@filter.Priority"
+           asp-route-TeamId="@filter.TeamId"
+           asp-route-SlaState="@filter.SlaState"
+           asp-route-SortBy="@filter.SortBy"
+           asp-route-SortDescending="@filter.SortDescending"
+           class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Filter and Search Card -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Search Keywords</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="SearchTerm" value="@filter.SearchTerm" class="form-control" placeholder="Ref, title, requester..." />
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Status</label>
+                <select name="Status" asp-items="Html.GetEnumSelectList<RequestStatus>()" class="form-select">
+                    <option value="">All Statuses</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Category</label>
+                <select name="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Priority</label>
+                <select name="Priority" asp-items="Html.GetEnumSelectList<RequestPriority>()" class="form-select">
+                    <option value="">All Priorities</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">SLA Health</label>
+                <select name="SlaState" asp-items="Html.GetEnumSelectList<SlaStatus>()" class="form-select">
+                    <option value="">All SLA States</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Sort By</label>
+                <select name="SortBy" class="form-select">
+                    <option value="CreatedAt" selected="@(filter.SortBy == "CreatedAt")">Creation Date</option>
+                    <option value="Reference" selected="@(filter.SortBy == "Reference")">Reference Number</option>
+                    <option value="Title" selected="@(filter.SortBy == "Title")">Title</option>
+                    <option value="Priority" selected="@(filter.SortBy == "Priority")">Priority</option>
+                    <option value="Status" selected="@(filter.SortBy == "Status")">Status</option>
+                    <option value="ResolutionDue" selected="@(filter.SortBy == "ResolutionDue")">Resolution Due Date</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Sort Order</label>
+                <select name="SortDescending" class="form-select">
+                    <option value="true" selected="@(filter.SortDescending)">Descending</option>
+                    <option value="false" selected="@(!filter.SortDescending)">Ascending</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Page Size</label>
+                <select name="PageSize" class="form-select">
+                    <option value="10" selected="@(filter.PageSize == 10)">10 per page</option>
+                    <option value="25" selected="@(filter.PageSize == 25)">25 per page</option>
+                    <option value="50" selected="@(filter.PageSize == 50)">50 per page</option>
+                </select>
+            </div>
+
+            <div class="col-md-5 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i>Apply Filters
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        @if (Model.Items.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Reference #</th>
+                            <th>Title & Requester</th>
+                            <th>Category</th>
+                            <th>Team</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assignee</th>
+                            <th>Created Date</th>
+                            <th>Resolution Due</th>
+                            <th>SLA Health</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@r.Id" class="fw-bold text-decoration-none">
+                                        @r.ReferenceNumber
+                                    </a>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-truncate" style="max-width: 240px;">@r.Title</div>
+                                    <small class="text-muted"><i class="bi bi-person me-1"></i>@r.RequesterName (@r.RequesterEmail)</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">@r.CategoryName</span></td>
+                                <td><span class="small fw-semibold text-secondary">@r.TeamName</span></td>
+                                <td>
+                                    <span class="badge @(r.Priority == RequestPriority.Critical ? "bg-danger" : r.Priority == RequestPriority.High ? "bg-warning text-dark" : r.Priority == RequestPriority.Medium ? "bg-info text-dark" : "bg-secondary")">
+                                        @r.Priority
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @(r.Status == RequestStatus.New ? "bg-primary" : r.Status == RequestStatus.Assigned ? "bg-info text-dark" : r.Status == RequestStatus.InProgress ? "bg-warning text-dark" : r.Status == RequestStatus.WaitingForRequester ? "bg-secondary" : r.Status == RequestStatus.Resolved ? "bg-success" : "bg-dark")">
+                                        @r.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(r.AssigneeName))
+                                    {
+                                        <span class="small"><i class="bi bi-headset me-1 text-primary"></i>@r.AssigneeName</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted border">Unassigned</span>
+                                    }
+                                </td>
+                                <td><small class="text-muted">@r.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</small></td>
+                                <td><small class="text-muted">@r.ResolutionDueAtUtc.ToString("yyyy-MM-dd HH:mm")</small></td>
+                                <td>
+                                    @if (r.IsSlaBreached)
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Breached</span>
+                                    }
+                                    else if (r.SlaStatus == SlaStatus.ApproachingBreach)
+                                    {
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Due Soon</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>On Track</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-primary">
+                                        View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Server-Side Pagination Bar -->
+            <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <div class="small text-muted">
+                    Showing page <strong>@Model.PageIndex</strong> of <strong>@Model.TotalPages</strong> (Total: <strong>@Model.TotalCount</strong> records)
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link"
+                               asp-action="Index"
+                               asp-route-PageNumber="@(Model.PageIndex - 1)"
+                               asp-route-PageSize="@filter.PageSize"
+                               asp-route-SearchTerm="@filter.SearchTerm"
+                               asp-route-Status="@filter.Status"
+                               asp-route-CategoryId="@filter.CategoryId"
+                               asp-route-Priority="@filter.Priority"
+                               asp-route-TeamId="@filter.TeamId"
+                               asp-route-SlaState="@filter.SlaState"
+                               asp-route-SortBy="@filter.SortBy"
+                               asp-route-SortDescending="@filter.SortDescending">
+                                Previous
+                            </a>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">@Model.PageIndex / @Model.TotalPages</span>
+                        </li>
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link"
+                               asp-action="Index"
+                               asp-route-PageNumber="@(Model.PageIndex + 1)"
+                               asp-route-PageSize="@filter.PageSize"
+                               asp-route-SearchTerm="@filter.SearchTerm"
+                               asp-route-Status="@filter.Status"
+                               asp-route-CategoryId="@filter.CategoryId"
+                               asp-route-Priority="@filter.Priority"
+                               asp-route-TeamId="@filter.TeamId"
+                               asp-route-SlaState="@filter.SlaState"
+                               asp-route-SortBy="@filter.SortBy"
+                               asp-route-SortDescending="@filter.SortDescending">
+                                Next
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+        else
+        {
+            <div class="p-5 text-center text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                <h5>No service requests found</h5>
+                <p class="small">Try adjusting search parameters or filter criteria.</p>
+            </div>
+        }
+    </div>
+</div>

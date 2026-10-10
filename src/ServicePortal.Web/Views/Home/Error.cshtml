@@ -1,0 +1,41 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "System Error";
+}
+
+<div class="row justify-content-center my-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white py-3 text-center">
+                <i class="bi bi-exclamation-octagon fs-1"></i>
+                <h4 class="mt-2 mb-0">An Unexpected Error Occurred</h4>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="text-muted">
+                    We apologize for the inconvenience. The system encountered an error while processing your request.
+                    A diagnostic record has been safely captured in our application logs.
+                </p>
+
+                @if (!string.IsNullOrEmpty(Model?.RequestId))
+                {
+                    <div class="alert alert-light border my-3">
+                        <strong class="d-block text-secondary mb-1">Correlation Identifier (Trace ID):</strong>
+                        <code class="fs-6 text-danger fw-bold user-select-all">@Model.RequestId</code>
+                        <div class="small text-muted mt-2">
+                            Please provide this identifier when contacting IT Support or Contoso System Administrators.
+                        </div>
+                    </div>
+                }
+
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                        <i class="bi bi-house-door me-1"></i>Return to Home
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Go Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
